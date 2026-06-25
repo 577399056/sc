@@ -1,32 +1,76 @@
-name: Build
+name: Build sing-box CNS
 
 on:
   push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
   workflow_dispatch:
 
 jobs:
-  build:
-    strategy:
-      matrix:
-        goos: [linux, windows, darwin]
-        goarch: [amd64, arm64]
+  build-android:
+    name: Build Android (${{ matrix.goarch }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        goarch: [arm64, amd64]
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: "1.24"
+- name: Go mod tidy
+        run: go mod tidy
 
-      - name: Build
-        env:
-          CGO_ENABLED: 0
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
+      - name: Build ${{ matrix.goarch }}
         run: |
-          go build -o sing-box-cns-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.exe' || '' }} ./cmd/sing-box
+          mkdir -p output
+          GOOS=android GOARCH=${{ matrix.goarch }} CGO_ENABLED=0 \
+            go build -v -trimpath \
+              -tags "with_gvisor,with_quic,with_utls,with_clash_api,with_ccm,with_ocm,badlinkname,tfogo_checklinkname0" \
+              -ldflags "-s -w -buildid= -X internal/godebug.defaultGODEBUG=multipathtcp=0 -checklinkname=0" \
+              -o "output/sing-box-${{ matrix.goarch }}" \
+              ./cmd/sing-box
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload ${{ matrix.goarch }}
+        uses: actions/upload-artifact@v4
         with:
-          name: sing-box-cns-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: sing-box-cns-*
+          name: sing-box-android-${{ matrix.goarch }}
+          path: output/sing-box-${{ matrix.goarch }}
+
+  build-windows:
+    name: Build Windows (amd64)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+- name: Go mod tidy
+        run: go mod tidy
+
+      - name: Build Windows
+        run: |
+          mkdir -p output
+          $env:GOOS="windows"
+          $env:GOARCH="amd64"
+          $env:CGO_ENABLED="0"
+          go build -v -trimpath `
+            -tags "with_gvisor,with_quic,with_utls,with_clash_api,with_ccm,with_ocm,badlinkname,tfogo_checklinkname0" `
+            -ldflags "-s -w -buildid= -X internal/godebug.defaultGODEBUG=multipathtcp=0 -checklinkname=0" `
+            -o output/sing-box-cns.exe `
+            ./cmd/sing-box
+
+      - name: Upload Windows
+        uses: actions/upload-artifact@v4
+        with:
+          name: sing-box-windows-amd64
+          path: output/sing-box-cns.exe
+
