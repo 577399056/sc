@@ -1,0 +1,50 @@
+{
+  "log": {
+    "level": "info",
+    "timestamp": true
+  },
+  "inbounds": [
+    {
+      "type": "mixed",
+      "tag": "mixed-in",
+      "listen": "127.0.0.1",
+      "listen_port": 2080,
+      "set_system_proxy": false
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "cns",
+      "tag": "cns-out",
+      "server": "your-cns-server.com",
+      "server_port": 2222,
+      "encrypt_password": "password",
+      "udp_over_tcp": true,
+      "proxy_key": "Host",
+      "udp_flag": "httpUDP",
+
+      "//_tls": "(optional) Enable TLS:",
+      "//_tls_example": {
+        "//_comment": "Uncomment the tls section if your CNS server uses TLS",
+        "_tls": {
+          "enabled": true,
+          "server_name": "your-cns-server.com",
+          "insecure": false
+        }
+      }
+    },
+    {
+      "type": "direct",
+      "tag": "direct"
+    }
+  ],
+  "route": {
+    "rules": [
+      {
+        "outbound": "cns-out",
+        "network": ["tcp", "udp"]
+      }
+    ],
+    "auto_detect_interface": true
+  }
+}
