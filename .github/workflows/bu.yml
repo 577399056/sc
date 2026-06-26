@@ -1,4 +1,4 @@
-name: Build sing-box CNS
+name: Build sing-box
 
 on:
   push:
